@@ -76,3 +76,36 @@ print("\nDías totales:", len(diario))
 diario = diario[(diario["horas_registradas"] >= 18) & (diario["horas_presion"] >= 12)]
 print("Días con suficientes mediciones:", len(diario))
 
+# ---------- 3. Crear nuevas variables ----------
+# Cambio de presión durante el día (si baja, puede venir mal tiempo)
+diario["cambio_presion"] = diario["presion_pm"] - diario["presion_am"]
+# Diferencia entre temperatura y punto de rocío (aire seco = diferencia grande)
+diario["deficit_rocio"] = diario["temp_media"] - diario["punto_rocio"]
+# Época del año. Usamos seno y coseno para que diciembre quede "cerca" de enero
+dia_del_anio = diario["dia"].dt.dayofyear
+diario["epoca_sen"] = np.sin(2 * np.pi * dia_del_anio / 365)
+diario["epoca_cos"] = np.cos(2 * np.pi * dia_del_anio / 365)
+
+# ---------- 4. Variable objetivo: temperatura máxima de MAÑANA ----------
+diario = diario.sort_values("dia").reset_index(drop=True)
+diario["temp_max_manana"] = diario["temp_max"].shift(-1)
+# Solo es válido si la siguiente fila es de verdad el día siguiente
+dias_hasta_siguiente = diario["dia"].shift(-1) - diario["dia"]
+diario.loc[dias_hasta_siguiente != pd.Timedelta(days=1), "temp_max_manana"] = np.nan
+diario = diario.dropna(subset=["temp_max_manana"])
+
+# Algunos días les falta la presión de la mañana o de la tarde.
+# Rellenamos con la presión media de ese mismo día.
+diario["presion_am"] = diario["presion_am"].fillna(diario["presion_media"])
+diario["presion_pm"] = diario["presion_pm"].fillna(diario["presion_media"])
+diario["cambio_presion"] = diario["presion_pm"] - diario["presion_am"]
+diario = diario.dropna()
+
+diario = diario.drop(columns=["horas_registradas", "horas_presion"])
+diario = diario.round(2)
+diario.to_csv("data/caracas_diario.csv", index=False)
+
+print("\nDataset final:", diario.shape)
+print("Desde", diario["dia"].min().date(), "hasta", diario["dia"].max().date())
+print(diario[["temp_max", "humedad_media", "presion_media", "viento_medio", "temp_max_manana"]].describe().round(2))
+print("\nGuardado en data/caracas_diario.csv")
