@@ -108,3 +108,60 @@ tabla.to_csv("resultados/comparacion_modelos.csv", index=False)
 mejor = tabla[tabla["Variables"] != "-"].iloc[0]
 print(f"\nMejor modelo: {mejor['Modelo']} con variables {mejor['Variables']}, MAE = {mejor['MAE']:.2f} °C")
 
+# ---------- Gráficas ----------
+# 1) Correlación de cada variable con la máxima de mañana
+correlaciones = datos[variables_completas + [objetivo]].corr()[objetivo].drop(objetivo).sort_values()
+plt.figure(figsize=(8, 6))
+plt.barh(correlaciones.index, correlaciones.values)
+plt.axvline(0, color="black")
+plt.title("Correlación con la temperatura máxima de mañana")
+plt.xlabel("Correlación")
+plt.tight_layout()
+plt.savefig("resultados/01_correlaciones.png")
+plt.close()
+correlaciones.round(3).to_csv("resultados/correlaciones.csv")
+
+# 2) Temperatura máxima a lo largo del tiempo
+plt.figure(figsize=(11, 4))
+plt.plot(datos["dia"], datos["temp_max"], linewidth=0.5)
+plt.title("Temperatura máxima diaria en Caracas (Maiquetía)")
+plt.ylabel("°C")
+plt.tight_layout()
+plt.savefig("resultados/02_temperatura_en_el_tiempo.png")
+plt.close()
+
+# 3) Real vs predicho con el mejor modelo
+pred_mejor = predicciones[(mejor["Modelo"], mejor["Variables"])]
+plt.figure(figsize=(11, 4))
+plt.plot(prueba["dia"], y_prueba.values, label="Real", linewidth=0.8)
+plt.plot(prueba["dia"], pred_mejor, label="Predicción", linewidth=0.8)
+plt.title(f"Real vs predicción - {mejor['Modelo']} ({mejor['Variables']})")
+plt.ylabel("°C")
+plt.legend()
+plt.tight_layout()
+plt.savefig("resultados/03_real_vs_prediccion.png")
+plt.close()
+
+# 4) Histograma de errores
+errores = y_prueba.values - pred_mejor
+plt.figure(figsize=(7, 4))
+plt.hist(errores, bins=30)
+plt.title("Distribución del error (real - predicho)")
+plt.xlabel("°C")
+plt.ylabel("Cantidad de días")
+plt.tight_layout()
+plt.savefig("resultados/04_errores.png")
+plt.close()
+
+# 5) Importancia de variables según el Random Forest
+rf = RandomForestRegressor(n_estimators=200, max_depth=10, min_samples_leaf=5, random_state=0)
+rf.fit(entrenamiento[variables_completas], y_entrenamiento)
+importancia = pd.Series(rf.feature_importances_, index=variables_completas).sort_values()
+importancia.round(3).to_csv("resultados/importancia_variables.csv")
+plt.figure(figsize=(8, 6))
+plt.barh(importancia.index, importancia.values)
+plt.title("Importancia de las variables (Random Forest)")
+plt.tight_layout()
+plt.savefig("resultados/05_importancia_variables.png")
+plt.close()
+
