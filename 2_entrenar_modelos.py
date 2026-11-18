@@ -165,3 +165,19 @@ plt.tight_layout()
 plt.savefig("resultados/05_importancia_variables.png")
 plt.close()
 
+# ---------- Guardar los modelos (fase 6: implementación) ----------
+# Volvemos a entrenar con TODOS los datos para que el modelo final
+# aprenda también de 2024-2025.
+# Modelo completo (el mejor)
+variables_mejor = variables_completas if mejor["Variables"] == "Completas" else variables_basicas
+modelo_final = crear_modelos()[mejor["Modelo"]]
+modelo_final.fit(datos[variables_mejor], datos[objetivo])
+joblib.dump((modelo_final, variables_mejor), "resultados/modelo_completo.pkl")
+
+# Modelo solo con humedad, presión y viento (para el modo interactivo)
+mejor_basico = tabla[tabla["Variables"] == "Básicas"].iloc[0]
+modelo_basico = crear_modelos()[mejor_basico["Modelo"]]
+modelo_basico.fit(datos[variables_basicas], datos[objetivo])
+joblib.dump((modelo_basico, variables_basicas), "resultados/modelo_basico.pkl")
+
+print("\nListo. Gráficas, tabla y modelos guardados en la carpeta resultados/")
