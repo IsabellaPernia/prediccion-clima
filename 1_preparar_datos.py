@@ -102,7 +102,8 @@ diario["cambio_presion"] = diario["presion_pm"] - diario["presion_am"]
 diario = diario.dropna()
 
 diario = diario.drop(columns=["horas_registradas", "horas_presion"])
-diario = diario.round(2)
+columnas_numericas = diario.select_dtypes("number").columns
+diario[columnas_numericas] = diario[columnas_numericas].round(2)
 diario.to_csv("data/caracas_diario.csv", index=False)
 
 print("\nDataset final:", diario.shape)
