@@ -86,3 +86,25 @@ pred_referencia = prueba["temp_max"]
 mae, rmse, r2, ep, ac = calcular_metricas(y_prueba, pred_referencia)
 resultados.append(["Referencia (mañana = hoy)", "-", mae, rmse, r2, ep, ac])
 
+# ---------- Entrenar los 4 modelos con los 2 grupos de variables ----------
+for nombre_grupo, variables in [("Básicas", variables_basicas), ("Completas", variables_completas)]:
+    modelos = crear_modelos()
+    for nombre_modelo, modelo in modelos.items():
+        modelo.fit(entrenamiento[variables], y_entrenamiento)
+        pred = modelo.predict(prueba[variables])
+        mae, rmse, r2, ep, ac = calcular_metricas(y_prueba, pred)
+        resultados.append([nombre_modelo, nombre_grupo, mae, rmse, r2, ep, ac])
+        predicciones[(nombre_modelo, nombre_grupo)] = pred
+        print(f"{nombre_modelo:20s} | {nombre_grupo:9s} | MAE = {mae:.3f} °C")
+
+tabla = pd.DataFrame(resultados, columns=["Modelo", "Variables", "MAE", "RMSE", "R2",
+                                          "Error %", "Aciertos ±1°C %"])
+tabla = tabla.sort_values("MAE").round(3)
+print("\n===== RESULTADOS EN EL CONJUNTO DE PRUEBA (2024-2025) =====")
+print(tabla.to_string(index=False))
+tabla.to_csv("resultados/comparacion_modelos.csv", index=False)
+
+# El mejor modelo es el de menor MAE (sin contar la referencia)
+mejor = tabla[tabla["Variables"] != "-"].iloc[0]
+print(f"\nMejor modelo: {mejor['Modelo']} con variables {mejor['Variables']}, MAE = {mejor['MAE']:.2f} °C")
+
